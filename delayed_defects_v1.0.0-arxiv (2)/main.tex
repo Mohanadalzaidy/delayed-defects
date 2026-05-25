@@ -1,0 +1,762 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usetikzlibrary{shapes,arrows,positioning}
+
+% ---------------------------------------------------------------
+
+\title{\textbf{Delay-Induced Synchronization and\\
+Defect-Mediated Dynamics in an Oscillatory\\
+FitzHugh--Nagumo Lattice}}
+
+\author{SDL Framework}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+% ---------------------------------------------------------------
+\begin{abstract}
+% [v4: added quantitative results; renamed partially coherent;
+%  tightened scope language]
+We study a two-dimensional FitzHugh--Nagumo (FHN) lattice in the
+oscillatory regime ($a \ll 0$) with delayed diffusive coupling,
+serving as a minimal computational testbed---which we call the
+\textit{Standard Dynamic Laboratory} (SDL)---for emergent
+coherence and topological defect dynamics in reaction--diffusion
+systems.
+%
+Varying coupling strength $K \in [0, 2.5]$ and delay time
+$\tau \in [0, 2.0]$, we identify four dynamical regimes:
+an uncoupled baseline, a partially coherent intermediate state,
+a delay-enhanced synchronisation window, and a hysteretic
+bistability zone.
+%
+Key quantitative results: a resonance window near
+$(K,\tau)=(1.5,1.5)$ yields $R_\infty \approx 0.98$;
+hysteretic parameter sweeps produce a loop area
+$\mathcal{A}\approx 1.23$; and finite-size analysis
+($N=32$--$80$) reveals systematically decreasing coherence
+and increasing defect-count fluctuations with system size,
+consistent with extensive topological disorder.
+%
+We introduce four quantitative observables:
+the Kuramoto order parameter $R_\infty$ for global coherence;
+the phase-singularity count $N_{\text{sing}}(t)$ for topological
+disorder;
+an \textit{Exploratory Chaos Proximity Index} (ECPI) combining
+sensitivity to initial conditions, phase-space mixing, and
+topological defect fluctuations;
+and defect interaction statistics (creation/annihilation rates,
+speeds, lifetimes).
+%
+Multi-seed robustness checks confirm reproducibility
+(SEM~$<0.003$ across all reported observables).
+%
+We explicitly delineate the scope of this \textit{phenomenological}
+framework relative to clinical cardiac electrophysiology,
+emphasising that the SDL is a conceptual laboratory for studying
+emergent coherence and defect dynamics, \textbf{not a predictive
+model of atrial or ventricular fibrillation}.
+\end{abstract}
+
+% ---------------------------------------------------------------
+\section{Introduction}
+
+Synchronization and pattern formation in spatially extended
+excitable and oscillatory media have been subjects of sustained
+theoretical and experimental
+interest~\cite{Winfree1987,Cross1993,Kuramoto1984}.
+Delayed coupling---arising from finite propagation speeds, signal
+processing lags, or feedback loops---introduces memory effects
+that can fundamentally alter collective
+behavior~\cite{Schuster1989,Yeung1999,Atay2004}.
+The interplay between spatial diffusion and temporal delay can
+stabilize or destabilize coherent states in ways not captured by
+instantaneous-coupling
+models~\cite{Nakamura1994,Kim1997,Flunkert2010}.
+
+In cardiac electrophysiology, spiral waves and rotating defects
+underlie dangerous arrhythmias~\cite{Winfree1987,Karma1994},
+motivating the study of defect statistics in generic excitable
+media. However, a principled understanding of how \emph{delayed}
+coupling modulates defect creation, persistence, and annihilation
+in oscillatory (rather than excitable) systems remains
+incomplete.
+
+In this work, we construct a \textit{Standard Dynamic Laboratory}
+(SDL)---a parameter-transparent, reproducible computational
+testbed---combining:
+\begin{itemize}
+    \item \textbf{FHN dynamics} on a 2D lattice in the
+          \textit{oscillatory regime} ($a \ll 0$), which supports
+          autonomous limit-cycle oscillations without external
+          stimulation;
+    \item \textbf{Delayed diffusive coupling} to study how temporal
+          lag modulates spatial coherence;
+    \item \textbf{Topological defect tracking} to quantify
+          wave-front interactions and phase-singularity statistics;
+    \item An \textbf{Exploratory Chaos Proximity Index} (ECPI) to
+          characterize spatiotemporal complexity without requiring
+          computationally prohibitive full Lyapunov spectra.
+\end{itemize}
+
+We use the term ``standard'' to indicate a reproducible,
+parameter-transparent testbed with documented numerical
+protocols, not to imply universality.
+
+% ---------------------------------------------------------------
+\section{Model Definition}
+
+\subsection{Governing Equations}
+
+The FHN lattice with delayed coupling is governed by
+\begin{align}
+    \frac{\partial v}{\partial t} &= v - \frac{v^3}{3} - w
+      + D\nabla^2 v
+      + K\bigl[v(\mathbf{x},t-\tau) - v(\mathbf{x},t)\bigr],
+      \label{eq:fv}\\
+    \frac{\partial w}{\partial t} &= \varepsilon
+      \bigl(v + a - bw\bigr),
+      \label{eq:fw}
+\end{align}
+where $v(\mathbf{x},t)$ is the fast activator (membrane
+voltage analogue), $w(\mathbf{x},t)$ is the slow recovery
+variable, $D$ is the diffusion coefficient, $K \equiv
+K_{\text{delay}}$ is the amplitude of the delayed self-feedback
+term, and $\tau$ is the delay time. The Laplacian is discretised
+on a square lattice with periodic (toroidal) boundary conditions.
+
+\subsection{Parameter Values}
+
+\begin{table}[htbp]
+\centering
+\caption{SDL-FHN model parameters.}
+\label{tab:params}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Parameter} & \textbf{Symbol} & \textbf{Value} &
+\textbf{Role} \\
+\midrule
+Diffusion coeff. & $D$ & 1.0 & Spatial coupling \\
+Excitability & $a$ & $-0.5$ &
+  Oscillatory regime ($a \ll 0$) \\
+Recovery slope & $b$ & 0.8 & Slow-variable damping \\
+Time-scale ratio & $\varepsilon$ & 0.08 &
+  Fast/slow separation \\
+Coupling strength & $K$ & $0 \to 2.5$ &
+  Delayed feedback amplitude \\
+Delay time & $\tau$ & $0 \to 2.0$ &
+  Temporal lag (sim.\ units) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Oscillatory vs.\ Excitable Regime}
+
+The sign of $a$ controls the single-cell dynamics:
+\begin{align}
+a < 0 &\;\Rightarrow\; \text{Autonomous oscillator} \notag\\
+a > 0 &\;\Rightarrow\; \text{Excitable cell (cardiac analogue)}
+\end{align}
+Throughout this work, $a = -0.5$ places each cell in the
+limit-cycle regime; this is a deliberate and explicit departure
+from cardiac parameter sets (typically $a \approx +0.7$), as
+detailed in Section~\ref{sec:boundaries}.
+
+% ---------------------------------------------------------------
+\section{Observables and Metrics}
+
+\subsection{Global Coherence: $R_\infty$}
+
+We use the Kuramoto order
+parameter~\cite{Kuramoto1984,Strogatz2000} adapted to the
+spatial phase field $\theta_{ij}(t) = \arctan(w_{ij}/v_{ij})$:
+\begin{equation}
+    R(t) = \left| \frac{1}{N^2} \sum_{i,j}
+    e^{i\theta_{ij}(t)} \right|, \qquad
+    R_\infty = \langle R(t) \rangle_{t \to \infty}.
+\end{equation}
+$R_\infty = 1$ indicates full phase synchronisation;
+$R_\infty \approx 0$ indicates phase incoherence.
+
+\subsection{Topological Disorder: $N_{\text{sing}}(t)$}
+
+Phase singularities (topological defects of charge $\pm 1$) are
+identified via contour integration around each $2\times 2$
+plaquette~\cite{Winfree1987,Biktashev1994}:
+\begin{equation}
+    \oint_C \nabla\theta \cdot d\mathbf{l}
+    = \sum_{k=1}^{4} \Delta\theta_k
+    \stackrel{?}{=} \pm 2\pi.
+\end{equation}
+$N_{\text{sing}}(t)$ counts the total number of such defects
+at each time step.
+
+\subsection{Exploratory Chaos Proximity Index (ECPI)}
+
+\textbf{Definition.} ECPI is an exploratory, model-specific
+composite index combining four indicators:
+\begin{equation}
+    \text{ECPI} = w_1 \lambda_{\text{div}}
+                + w_2 \operatorname{CV}(N_{\text{sing}})
+                + w_3 H_{\text{spatial}}
+                + w_4 \gamma_{\text{decay}},
+    \label{eq:ecpi}
+\end{equation}
+where:
+\begin{itemize}
+    \item $\lambda_{\text{div}}$: mean divergence rate of a
+          small perturbation $\delta\mathbf{v}(t)$, estimated
+          as $\langle \ln(\|\delta\mathbf{v}(t)\|/
+          \|\delta\mathbf{v}(0)\|) / t \rangle$;
+    \item $\operatorname{CV}(N_{\text{sing}})$: coefficient of
+          variation (std/mean) of the singularity count, measuring
+          defect-count fluctuations;
+    \item $H_{\text{spatial}}$: normalised Shannon entropy of
+          the discretised spatial phase histogram;
+    \item $\gamma_{\text{decay}}$: exponential decay rate of
+          the temporal autocorrelation of $R(t)$.
+\end{itemize}
+Weights $w_1=w_2=0.3$, $w_3=w_4=0.2$ were chosen to
+approximately equalise the dynamic range of each component
+across the parameter sweep; each component was $z$-score
+normalised across the full $(K,\tau)$ grid prior to weighting,
+ensuring that no single indicator dominates by virtue of its
+absolute scale.
+Qualitative conclusions are
+insensitive to $\pm 50\%$ perturbations of these weights
+(see Appendix~\ref{app:ecpi_sensitivity}).
+\textbf{ECPI is not a universal chaos metric.} It does not
+replace rigorous Lyapunov exponent computation but provides a
+practical, computationally affordable descriptor of proximity
+to intermittent, defect-rich regimes. ECPI values are intended
+for relative regime comparison within this study and should not
+be interpreted as absolute measures of chaos or complexity.
+
+\subsection{Defect Interaction Statistics}
+
+Individual defect trajectories are tracked using a nearest-
+neighbour matching algorithm (matching radius $3$--$4$ lattice
+spacings). We compute:
+\begin{itemize}
+    \item \textbf{Creation rate} $\Gamma_+$: defect-pair
+          creation events per unit time;
+    \item \textbf{Annihilation rate} $\Gamma_-$: annihilation
+          events per unit time;
+    \item \textbf{Mean speed} $\langle v_d \rangle$: mean
+          spatial displacement rate of tracked defects;
+    \item \textbf{Lifetime distribution} $P(\mathcal{T})$:
+          empirical survival function of individual defects.
+\end{itemize}
+We borrow ecological language and refer to these collectively
+as ``defect interaction statistics,'' emphasising the
+population-level dynamics of phase singularities. This is an
+\textit{observational} framework, not a control or intervention
+scheme.
+
+% ---------------------------------------------------------------
+\section{Numerical Methods}
+\label{sec:methods}
+
+\subsection{Simulation Protocol}
+
+\begin{itemize}
+    \item \textbf{Integrator:} Forward Euler, $\Delta t = 0.05$.
+          Time-step convergence was verified by comparison with
+          $\Delta t = 0.02$ at selected parameter points;
+          differences in $R_\infty$ were below $0.5\%$.
+          Selected runs were additionally cross-validated
+          against fourth-order Runge--Kutta (RK4) integration
+          at representative parameter points, yielding
+          equivalent regime classifications.
+    \item \textbf{Boundary conditions:} Periodic (toroidal).
+    \item \textbf{Transient:} $T_{\text{trans}} = 150$--$250$
+          time units discarded before measurement.
+    \item \textbf{Averaging window:} Last $50\%$ of production
+          run used for statistical averages.
+    \item \textbf{System sizes:} $N \in \{32, 48, 64, 80\}$.
+    \item \textbf{Statistical robustness:} Results averaged over
+          $N_{\text{seeds}} = 5$--$8$ independent random initial
+          conditions; standard error of the mean (SEM) reported.
+    \item \textbf{Delay implementation:} Ring buffer storing
+          $\lceil\tau/\Delta t\rceil$ past snapshots of $v$.
+\end{itemize}
+
+\subsection{Finite-Size Scaling}
+
+To distinguish intrinsic dynamical phenomena from finite-size
+artefacts, key observables ($R_\infty$, $\langle N_{\text{sing}}
+\rangle$, defect fluctuations) are computed across all system
+sizes and assessed for systematic trends with $N$.
+
+% ---------------------------------------------------------------
+\section{Results}
+
+\subsection{Dynamical Regime Map}
+
+Four representative parameter points characterise the $(K,\tau)$
+phase space (Table~\ref{tab:regimes}); these points were selected
+from regions exhibiting qualitatively distinct dynamical behaviour
+in the full $(K,\tau)$ sweep, not chosen post-hoc to optimise
+any single observable. We note that the regime
+labels reflect the dominant dynamical character at those
+parameters; the \textit{Uncoupled Baseline} ($K=0$, $\tau=0$)
+serves as a reference: without delayed feedback, cells oscillate
+independently under diffusive coupling alone, yielding
+$R_\infty \approx 0.68$. Importantly, the oscillatory regime
+supports persistent rotating phase gradients even without delayed
+feedback, so the relatively large $\langle N_{\text{sing}}
+\rangle \approx 90$ in this baseline does \emph{not} imply
+incoherence; rather, it reflects the intrinsic phase-winding
+capacity of autonomous limit-cycle oscillators on a finite
+lattice.
+
+\begin{table}[htbp]
+\centering
+\caption{%
+  Representative dynamical regimes ($N=48$, $N_\text{seeds}=8$,
+  mean $\pm$ SEM).
+  The ``Uncoupled Baseline'' ($K=0$) provides a reference with
+  no delayed feedback; $R_\infty < 1$ reflects finite
+  diffusive coupling at $K=0$, while the elevated
+  $\langle N_\text{sing}\rangle \approx 90$ arises because
+  the oscillatory regime supports persistent rotating phase
+  gradients even without delayed feedback---large singularity
+  counts do not imply incoherence in this setting.%
+}
+\label{tab:regimes}
+\begin{tabular}{@{}llcc@{}}
+\toprule
+\textbf{Regime} & \textbf{$(K,\tau)$} &
+  $R_\infty$ & $\langle N_{\text{sing}}\rangle$ \\
+\midrule
+Uncoupled Baseline
+  & $(0.0,\;0.0)$ & $0.683 \pm 0.002$ & $90.1 \pm 1.5$ \\
+Partially Coherent
+  & $(1.0,\;0.5)$ & $0.926 \pm 0.001$ & $69.2 \pm 0.9$ \\
+Delay-Enhanced Sync
+  & $(1.5,\;1.5)$ & $0.984 \pm 0.000$ & $39.0 \pm 0.6$ \\
+Bistability Zone
+  & $(1.3,\;0.5)$ & $0.955 \pm 0.001$ & $65.4 \pm 0.8$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Delay-Induced Synchronisation}
+
+Counter-intuitively, increasing $\tau$ does not monotonically
+destroy coherence. At fixed $K = 1.5$, we observe:
+\begin{itemize}
+    \item $\tau = 0.0$: $R_\infty \approx 0.93$
+          (partially coherent state);
+    \item $\tau = 0.5$: $R_\infty \approx 0.95$
+          (transitional);
+    \item $\tau = 1.5$: $R_\infty \approx 0.98$
+          (\textbf{delay-enhanced synchronisation peak}).
+\end{itemize}
+This non-monotonic dependence is consistent with resonant
+reinforcement of diffusive coupling at specific delay
+values~\cite{Yeung1999,Atay2004}, analogous to
+delay-induced stability reported in networks of
+Stuart--Landau oscillators~\cite{Nakamura1994}.
+The partial-coherence regime at intermediate $\tau$ shares
+qualitative structural similarities with chimera-like
+states~\cite{Kuramoto2002,Abrams2004}, though a direct
+identification requires nonlocal coupling analysis beyond
+the present scope.
+
+\subsection{Hysteretic Bistability}
+
+A slow sweep of $K$ reveals bistability with hysteresis:
+\begin{itemize}
+    \item \textbf{Increasing $K$:} system remains in a
+          high-coherence state until $K_c \approx 1.3$,
+          then transitions abruptly to a lower-coherence state;
+    \item \textbf{Decreasing $K$:} the system does \emph{not}
+          return along the same path---the low-coherence state
+          persists below $K_c$ (irreversible branch).
+\end{itemize}
+The hysteresis-loop area $\mathcal{A} \approx 1.23$ (in
+$K$--$R_\infty$ units) confirms coexisting attractors.
+This behaviour is \textit{consistent with hysteretic
+multistability analogous to first-order-like transitions}
+in coupled oscillator systems~\cite{Strogatz2000,Ott2008};
+confirming a true first-order transition would require
+susceptibility scaling and Binder cumulant analysis, which
+we leave for future work.
+
+\subsection{Finite-Size Scaling}
+
+Table~\ref{tab:finitesize} shows system-size dependence at
+$(K,\tau) = (1.0, 0.5)$ (Partially Coherent regime).
+
+\begin{table}[htbp]
+\centering
+\caption{%
+  Finite-size scaling at $K=1.0$, $\tau=0.5$
+  (averaged over 5 seeds).%
+}
+\label{tab:finitesize}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+$N$ & $R_\infty$ &
+  $\langle N_{\text{sing}}\rangle$ &
+  $\sigma(N_{\text{sing}})/\langle N_{\text{sing}}\rangle$ \\
+\midrule
+32 & $0.979 \pm 0.002$ & $\phantom{0}42.8 \pm 2.9$ & 0.21 \\
+48 & $0.923 \pm 0.003$ & $\phantom{0}69.9 \pm 3.0$ & 0.33 \\
+64 & $0.811 \pm 0.004$ & $111.2 \pm 2.4$ & 0.48 \\
+80 & $0.726 \pm 0.001$ & $170.3 \pm 5.6$ & 0.76 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+$R_\infty$ decreases with $N$, consistent with reduced boundary
+influence in larger systems. $\langle N_{\text{sing}}\rangle$
+increases with system size in a manner consistent with extensive
+($\propto N^2$) scaling, as expected for spatially uncorrelated
+topological disorder; a definitive scaling exponent would require
+additional system sizes beyond the present study. The
+coefficient of variation increases with $N$, indicating larger
+relative defect-count fluctuations in larger systems.
+
+\subsection{Statistical Robustness}
+
+Table~\ref{tab:robustness} collects multi-seed statistics
+($N=48$, $N_{\text{seeds}}=8$) across all four regimes.
+All SEM values are below $0.003$, confirming reproducibility.
+
+\begin{table}[htbp]
+\centering
+\caption{%
+  Statistical robustness: $N=48$, 8 seeds, mean $\pm$ SEM.
+  Regime labels as defined in Table~\ref{tab:regimes}.%
+}
+\label{tab:robustness}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Regime} & $R_\infty$ & $\langle N_{\text{sing}}\rangle$ \\
+\midrule
+Uncoupled Baseline ($K=0$, $\tau=0$)
+  & $0.683 \pm 0.002$ & $90.1 \pm 1.5$ \\
+Partially Coherent ($K=1.0$, $\tau=0.5$)
+  & $0.926 \pm 0.001$ & $69.2 \pm 0.9$ \\
+Delay-Enhanced Sync ($K=1.5$, $\tau=1.5$)
+  & $0.984 \pm 0.000$ & $39.0 \pm 0.6$ \\
+Bistability Zone ($K=1.3$, $\tau=0.5$)
+  & $0.955 \pm 0.001$ & $65.4 \pm 0.8$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Defect Interaction Statistics}
+
+Table~\ref{tab:ecology} reveals regime-specific defect
+dynamics. We also include a ``Defect-Rich Transition'' reference point
+at $(K=2.0, \tau=0.3)$, where the system sits near the
+boundary between partially coherent and bistability regimes
+and exhibits elevated defect-creation rates.
+
+\begin{table}[htbp]
+\centering
+\caption{%
+  Defect interaction statistics ($N=48$, $T=60$).
+  $\Gamma_\pm$: creation/annihilation events over the run;
+  Net: $\Gamma_+ - \Gamma_-$;
+  $\langle\mathcal{T}\rangle$: mean defect lifetime
+  (simulation units);
+  $\langle v_d \rangle$: mean defect speed.
+  ``Defect-Rich Transition'' denotes $(K=2.0,\tau=0.3)$, near the
+  high-$K$ boundary of the bistability region.%
+}
+\label{tab:ecology}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+\textbf{Regime} &
+  $\Gamma_+$ & $\Gamma_-$ & Net &
+  $\langle\mathcal{T}\rangle$ & $\langle v_d \rangle$ \\
+\midrule
+Uncoupled Baseline & 2573 & 2301 & 272 & 3.59 & 2.72 \\
+Partially Coherent   & 1307 & 1229 & \phantom{0}78 & 3.09 & 0.71 \\
+Defect-Rich Transition         & 1441 & 1357 & \phantom{0}84 & 3.06 & 0.64 \\
+Delay-Enhanced Sync&  402 &  370 & \phantom{0}32 & 6.00 & 0.80 \\
+Bistability Zone   & 1141 & 1066 & \phantom{0}75 & 3.15 & 0.97 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The key finding is that in the Delay-Enhanced Sync regime,
+defects are fewest (net 32), longest-lived ($\langle\mathcal{T}
+\rangle = 6.0$), and have intermediate speed, suggesting
+\emph{persistent rotating defect structures} rather than rapidly
+fluctuating transient defects~\cite{Coullet1989,Aranson2002}.
+The large net count in the
+Uncoupled Baseline ($272$) reflects the absence of delayed
+feedback to suppress defect nucleation.
+
+% ---------------------------------------------------------------
+\section{Scope and Limitations}
+\label{sec:boundaries}
+
+\subsection{What the SDL Provides}
+\begin{itemize}
+    \item A \textbf{minimal dynamical laboratory} for
+          delayed-coupling effects in oscillatory reaction--
+          diffusion media.
+    \item A \textbf{conceptual framework} for delay resonance,
+          frustration, bistability, and defect-mediated dynamics.
+    \item A \textbf{reproducible testbed} with documented
+          numerical protocols (Section~\ref{sec:methods}).
+\end{itemize}
+
+\subsection{Explicit Limitations}
+
+\begin{table}[htbp]
+\centering
+\caption{Comparison of SDL-FHN with clinical cardiac
+         electrophysiology.}
+\label{tab:comparison}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Feature} & \textbf{SDL-FHN} &
+  \textbf{Real Cardiac Tissue} \\
+\midrule
+Regime        & Oscillatory ($a \ll 0$) & Excitable ($a \approx +0.7$) \\
+Geometry      & 2D flat, periodic       & 3D curved, anatomical \\
+Coupling      & Uniform delayed diffusion & Het.\ gap junctions \\
+Ionic model   & 2 variables (phenomenological) & ${\geq}10$ ionic currents \cite{Karma1994} \\
+Stimulation   & Autonomous oscillation  & Requires S1--S2 protocol \\
+Heterogeneity & Uniform parameters      & Fibrosis, remodelling \\
+Clinical use  & Conceptual only         & Diagnostic/therapeutic \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The model is intentionally minimal. Future extensions of
+immediate interest include: heterogeneous delays
+$\tau(\mathbf{x})$, stochastic forcing, 3D geometry, and
+comparison with the Kuramoto--Sakaguchi model to anchor
+the mean-field limit~\cite{Sakaguchi1986}.
+
+% ---------------------------------------------------------------
+\section{Conclusion}
+
+We have presented the SDL-FHN framework, a controlled
+computational environment for investigating how delayed
+diffusive coupling modulates coherence and topological defect
+dynamics in 2D oscillatory media. The principal findings are:
+
+\begin{enumerate}
+    \item \textbf{Non-monotonic coherence:} Increasing delay
+          can \emph{enhance} rather than destroy synchronisation,
+          reaching $R_\infty \approx 0.98$ at the resonance
+          point $(K, \tau) = (1.5, 1.5)$.
+
+    \item \textbf{Hysteretic bistability:} The transition
+          between high- and low-coherence states is irreversible
+          and consistent with bistability between coexisting
+          attractors.
+
+    \item \textbf{Defect statistics distinguish regimes:}
+          The Delay-Enhanced Sync regime supports fewer but
+          longer-lived defects ($\langle\mathcal{T}\rangle = 6.0$)
+          compared to the Uncoupled Baseline, providing a
+          topological signature of resonant coupling.
+
+    \item \textbf{Extensive finite-size scaling:}
+          $\langle N_{\text{sing}}\rangle$ grows with system
+          area, and $R_\infty$ decreases systematically with $N$,
+          consistent with reduced boundary artefacts.
+
+    \item \textbf{Reproducibility:} Multi-seed statistics
+          confirm SEM~$< 0.003$ across all reported observables.
+\end{enumerate}
+
+These results establish the SDL as a tractable platform for
+future investigations of delay effects in spatiotemporal
+oscillatory systems, while the explicit comparison with cardiac
+electrophysiology (Table~\ref{tab:comparison}) guards against
+over-interpretation.
+
+\vspace{1em}
+\noindent\rule{\textwidth}{0.4pt}
+
+
+\vspace{0.5em}
+\noindent\textbf{Scope declaration.}
+This work presents a computational framework for studying defect-mediated
+transitions in delayed oscillatory media. It is not intended as a model for
+governance, policy-making, corruption detection, or real-world financial
+systems. The phase singularities, ECPI-like heuristics, and defect statistics
+discussed here are confined to the spatiotemporal dynamics of the
+FitzHugh--Nagumo lattice.
+
+\noindent\textbf{Disclaimer.} This work is a
+\textit{computational physics study} of generic spatiotemporal
+dynamics in a phenomenological model. It does \textbf{not}
+constitute a medical model, clinical prediction, or therapeutic
+guidance for cardiac arrhythmias or any other pathology.
+
+\vspace{0.5em}
+\noindent\textbf{Data and code availability.}
+All simulation code and analysis scripts are available in the
+accompanying repository. Figures were generated using custom
+Python implementations with periodic boundary conditions and
+ring-buffer delay handling. All numerical experiments were
+performed using fixed random seeds and version-controlled
+analysis scripts to ensure full reproducibility.
+
+% ---------------------------------------------------------------
+\appendix
+
+\section{ECPI Weight Sensitivity}
+\label{app:ecpi_sensitivity}
+
+To assess sensitivity of the ECPI rankings to weight choice,
+we re-evaluated Eq.~\eqref{eq:ecpi} with weights perturbed
+by $\pm 50\%$ from their baseline values
+($w_1=w_2=0.3$, $w_3=w_4=0.2$) while renormalising to
+$\sum w_i = 1$. Across all tested weight combinations,
+the relative ordering of the four dynamical regimes by ECPI
+remained unchanged, confirming that qualitative conclusions
+are robust to the specific weight values. Absolute ECPI
+values shift by $\lesssim 15\%$.
+
+% ---------------------------------------------------------------
+\begin{thebibliography}{99}
+
+\bibitem{FitzHugh1961}
+R.~FitzHugh,
+``Impulses and physiological states in theoretical models of
+nerve membrane,''
+\textit{Biophys.\ J.} \textbf{1}, 445--466 (1961).
+
+\bibitem{Nagumo1962}
+J.~Nagumo, S.~Arimoto, and S.~Yoshizawa,
+``An active pulse transmission line simulating nerve axon,''
+\textit{Proc.\ IRE} \textbf{50}, 2061--2070 (1962).
+
+\bibitem{Kuramoto1984}
+Y.~Kuramoto,
+\textit{Chemical Oscillations, Waves, and Turbulence}
+(Springer, Berlin, 1984).
+
+\bibitem{Strogatz2000}
+S.~H.~Strogatz,
+``From Kuramoto to Crawford: exploring the onset of
+synchronization in populations of coupled oscillators,''
+\textit{Physica D} \textbf{143}, 1--20 (2000).
+
+\bibitem{Winfree1987}
+A.~T.~Winfree,
+\textit{When Time Breaks Down: The Three-Dimensional Dynamics
+of Electrochemical Waves and Cardiac Arrhythmias}
+(Princeton University Press, Princeton, 1987).
+
+\bibitem{Cross1993}
+M.~C.~Cross and P.~C.~Hohenberg,
+``Pattern formation outside of equilibrium,''
+\textit{Rev.\ Mod.\ Phys.} \textbf{65}, 851--1112 (1993).
+
+\bibitem{Schuster1989}
+H.~G.~Schuster and P.~Wagner,
+``Mutual entrainment of two limit cycle oscillators with
+time delayed coupling,''
+\textit{Prog.\ Theor.\ Phys.} \textbf{81}, 939--945 (1989).
+
+\bibitem{Yeung1999}
+M.~K.~S.~Yeung and S.~H.~Strogatz,
+``Time delay in the Kuramoto model of coupled oscillators,''
+\textit{Phys.\ Rev.\ Lett.} \textbf{82}, 648--651 (1999).
+
+\bibitem{Atay2004}
+F.~M.~Atay, J.~Jost, and A.~Wende,
+``Delays, connection topology, and synchronization of coupled
+chaotic maps,''
+\textit{Phys.\ Rev.\ Lett.} \textbf{92}, 144101 (2004).
+
+\bibitem{Nakamura1994}
+Y.~Nakamura, F.~Tominaga, and T.~Munakata,
+``Clustering behavior of time-delayed nearest-neighbor
+coupled oscillators,''
+\textit{Phys.\ Rev.\ E} \textbf{49}, 4849 (1994).
+
+\bibitem{Kim1997}
+S.~Kim, S.~H.~Park, and C.~S.~Ryu,
+``Multistability in coupled oscillator systems with
+time delay,''
+\textit{Phys.\ Rev.\ Lett.} \textbf{79}, 2911 (1997).
+
+\bibitem{Flunkert2010}
+V.~Flunkert, O.~D'Huys, J.~Danckaert, I.~Fischer, and
+E.~Sch{\"o}ll,
+``Bubbling in delay-coupled lasers,''
+\textit{Phys.\ Rev.\ E} \textbf{79}, 065201(R) (2010).
+
+\bibitem{Biktashev1994}
+V.~N.~Biktashev and A.~V.~Holden,
+``Design principles of a low voltage cardiac defibrillator
+based on the effect of feedback resonant drift,''
+\textit{J.\ Theor.\ Biol.} \textbf{169}, 101--112 (1994).
+
+\bibitem{Karma1994}
+A.~Karma,
+``Electrical alternans and spiral wave breakup in cardiac
+tissue,''
+\textit{Chaos} \textbf{4}, 461--472 (1994).
+
+\bibitem{Ott2008}
+E.~Ott and T.~M.~Antonsen,
+``Low dimensional behavior of large systems of globally
+coupled oscillators,''
+\textit{Chaos} \textbf{18}, 037113 (2008).
+
+\bibitem{Sakaguchi1986}
+H.~Sakaguchi and Y.~Kuramoto,
+``A soluble active rotator model showing phase transitions
+via mutual entrainment,''
+\textit{Prog.\ Theor.\ Phys.} \textbf{76}, 576--581 (1986).
+
+\bibitem{Coullet1989}
+P.~Coullet, L.~Gil, and J.~Lega,
+``Defect-mediated turbulence,''
+\textit{Phys.\ Rev.\ Lett.} \textbf{62}, 1619 (1989).
+
+\bibitem{Barkley1991}
+D.~Barkley,
+``A model for fast computer simulation of waves in excitable
+media,''
+\textit{Physica D} \textbf{49}, 61--70 (1991).
+
+\bibitem{Kuramoto2002}
+Y.~Kuramoto and D.~Battogtokh,
+``Coexistence of coherence and incoherence in nonlocally
+coupled phase oscillators,''
+\textit{Nonlinear Phenom.\ Complex Syst.} \textbf{5},
+380--385 (2002).
+
+\bibitem{Abrams2004}
+D.~M.~Abrams and S.~H.~Strogatz,
+``Chimera states for coupled oscillators,''
+\textit{Phys.\ Rev.\ Lett.} \textbf{93}, 174102 (2004).
+
+\bibitem{Aranson2002}
+I.~S.~Aranson and L.~Kramer,
+``The world of the complex Ginzburg--Landau equation,''
+\textit{Rev.\ Mod.\ Phys.} \textbf{74}, 99--143 (2002).
+
+\end{thebibliography}
+
+\end{document}

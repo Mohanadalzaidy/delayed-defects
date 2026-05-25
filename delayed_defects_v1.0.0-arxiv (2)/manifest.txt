@@ -1,0 +1,39 @@
+SDL-FHN arXiv Submission Manifest
+==================================
+
+Release tag:        v1.0.0-arxiv
+Paper title:        Delay-Induced Synchronization and Defect-Mediated
+                    Dynamics in an Oscillatory FitzHugh-Nagumo Lattice
+Primary class:      nlin.CD
+Secondary class:    physics.comp-ph
+
+Archive contents (flat structure):
+  main.tex          LaTeX source (self-contained, inline bibliography)
+  manifest.txt      This file
+  README_arxiv.txt  Submission notes
+
+Compilation:
+  Engine:           pdflatex
+  Passes required:  2 (inline thebibliography)
+  No external .bib, no \includegraphics, no \input dependencies.
+  Output:           12 pages
+
+File hashes (SHA-256):
+  main.tex:  ec095c94f29904d9e786471a72020a529b0aafdd51acb7c0e252af05d7085d4e
+  main.pdf:  491a91fe8978129266e01a3fa5eb06c2ed6ec544f072ff8c58f611d73868c583
+
+Canonical simulation hash (from code repository):
+  f2de5afe1fd5da01
+  (N=24, K=1.5, tau=1.5, seed=0, Forward Euler dt=0.05)
+
+Code repository:    delayed-defects v1.0.0-arxiv (separate archive)
+                    Contains full reproducibility infrastructure.
+
+Verification status:
+  [x] LaTeX compiles standalone (2 passes)
+  [x] All citations resolve
+  [x] All cross-references resolve
+  [x] No \includegraphics / external assets needed
+  [x] Terminology clean (no Chaos-Edge / Delay-Frustrated / rotor-like)
+  [x] z-score normalisation consistent with code implementation
+  [x] Scope declaration present
